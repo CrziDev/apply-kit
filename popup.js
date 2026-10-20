@@ -182,7 +182,7 @@ function download(f) {
 const toDataUrl = blob => new Promise(res => { const r = new FileReader(); r.onload = () => res(r.result); r.readAsDataURL(blob); });
 
 async function attach(f) {
-  if (IS_TAB) return toast("Open Apply Kit from the application page to attach");
+  if (IS_TAB) return toast("Open Stash from the page with the upload field to attach");
   try {
     const [tabInfo] = await chrome.tabs.query({ active: true, currentWindow: true });
     const dataUrl = await toDataUrl(f.blob);
