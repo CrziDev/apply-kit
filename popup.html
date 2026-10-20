@@ -1,23 +1,67 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
 <meta charset="utf-8">
+<title>Apply Kit</title>
 <link rel="stylesheet" href="popup.css">
 </head>
 <body>
-  <nav>
-    <button class="tab active" data-tab="links">Links</button>
-    <button class="tab" data-tab="text">Text</button>
-    <button class="tab" data-tab="files">Files</button>
+  <nav role="tablist">
+    <button class="tab" role="tab" id="tab-links" data-tab="links" aria-controls="links" aria-selected="true">Links</button>
+    <button class="tab" role="tab" id="tab-text" data-tab="text" aria-controls="text" aria-selected="false">Text</button>
+    <button class="tab" role="tab" id="tab-files" data-tab="files" aria-controls="files" aria-selected="false">Files</button>
   </nav>
-  <input id="search" placeholder="Search…">
-  <div id="toast"></div>
+  <input id="search" type="search" placeholder="Search…" aria-label="Search">
+  <div id="toast" role="status"></div>
 
-  <section id="links" class="pane active"></section>
-  <section id="text" class="pane"></section>
-  <section id="files" class="pane"></section>
+  <section id="links" class="pane" role="tabpanel" aria-labelledby="tab-links">
+    <div class="list"></div>
+    <p class="empty" hidden>Nothing here yet.</p>
+  </section>
+  <section id="text" class="pane" role="tabpanel" aria-labelledby="tab-text" hidden>
+    <div class="list"></div>
+    <p class="empty" hidden>Nothing here yet.</p>
+  </section>
+  <section id="files" class="pane" role="tabpanel" aria-labelledby="tab-files" hidden>
+    <div class="list"></div>
+    <p class="empty" hidden>Add your resume, cover letter, etc.</p>
+  </section>
 
-  <footer id="addbar"></footer>
+  <footer>
+    <button id="add-item" title="Add">+</button>
+    <button id="open-manager" hidden>Add / manage files in a tab</button>
+    <form id="file-form" hidden>
+      <input id="f-label" placeholder="Label (e.g. Resume 2026)">
+      <input id="f-file" type="file" required>
+      <button type="submit">Add file</button>
+    </form>
+  </footer>
+
+  <template id="tpl-item">
+    <div class="item">
+      <div class="label"></div>
+      <div class="value"></div>
+      <div class="actions"><button data-a="open">Open</button><button data-a="edit">Edit</button><button data-a="del">✕</button></div>
+    </div>
+  </template>
+
+  <template id="tpl-edit">
+    <div class="item editing">
+      <input class="label" placeholder="Title">
+      <textarea class="value"></textarea>
+      <div class="actions"><button data-a="save">Save</button><button data-a="del">✕</button></div>
+    </div>
+  </template>
+
+  <template id="tpl-file">
+    <div class="item">
+      <div class="label"></div>
+      <div class="value"></div>
+      <div class="filemeta"></div>
+      <div class="actions"><button data-a="dl">Download</button><button data-a="del">✕</button></div>
+    </div>
+  </template>
+
   <script src="popup.js"></script>
 </body>
 </html>

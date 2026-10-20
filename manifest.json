@@ -4,11 +4,16 @@
   "version": "1.0",
   "description": "One-click copy of your links and answers, and one-click attach of your resume/files while filling out job applications.",
   "browser_specific_settings": {
-    "gecko": { "id": "apply-kit@local", "strict_min_version": "113.0" }
+    "gecko": {
+      "id": "apply-kit@crzidev.dev",
+      "strict_min_version": "113.0",
+      "data_collection_permissions": { "required": ["none"] }
+    }
   },
+  "icons": { "48": "icons/icon.svg", "96": "icons/icon.svg" },
   "permissions": ["storage", "activeTab", "scripting", "unlimitedStorage", "clipboardWrite"],
   "host_permissions": ["<all_urls>"],
-  "action": { "default_popup": "popup.html", "default_title": "Apply Kit" },
+  "action": { "default_popup": "popup.html", "default_title": "Apply Kit", "default_icon": "icons/icon.svg" },
   "content_scripts": [
     { "matches": ["<all_urls>"], "js": ["content.js"], "all_frames": true, "run_at": "document_start" }
   ]

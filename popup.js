@@ -47,6 +47,7 @@ let tab = IS_TAB && location.hash === "#files" ? "files" : "links", query = "";
 let editingId = null; // id of the card being edited, or "new" for an unsaved card
 const $ = s => document.querySelector(s);
 const uid = () => Math.random().toString(36).slice(2, 9);
+const fromTemplate = id => $(id).content.firstElementChild.cloneNode(true);
 
 function toast(msg) {
   const t = $("#toast");
@@ -64,47 +65,61 @@ function matches(it) {
   return !q || it.label.toLowerCase().includes(q) || (it.value || it.name || "").toLowerCase().includes(q);
 }
 
-async function render() {
-  document.querySelectorAll(".tab").forEach(b => b.classList.toggle("active", b.dataset.tab === tab));
-  document.querySelectorAll(".pane").forEach(p => p.classList.toggle("active", p.id === tab));
-  if (tab === "files") await renderFiles(); else await renderItems(tab);
-  renderAddBar();
+function showTab(name) {
+  tab = name;
+  editingId = null;
+  document.querySelectorAll(".tab").forEach(b => b.setAttribute("aria-selected", b.dataset.tab === tab));
+  document.querySelectorAll(".pane").forEach(p => p.hidden = p.id !== tab);
+  // Firefox closes the popup when a file picker opens, so adding files happens in a full tab.
+  $("#add-item").hidden = tab === "files";
+  $("#open-manager").hidden = tab !== "files" || IS_TAB;
+  $("#file-form").hidden = tab !== "files" || !IS_TAB;
+  render();
+}
+
+function render() {
+  return tab === "files" ? renderFiles() : renderItems(tab);
+}
+
+function fillPane(id, cards) {
+  const pane = $("#" + id);
+  pane.querySelector(".list").replaceChildren(...cards);
+  pane.querySelector(".empty").hidden = cards.length > 0;
 }
 
 async function renderItems(kind) {
   const data = await store.get();
-  const pane = $("#" + kind);
-  pane.innerHTML = "";
   const items = data[kind].filter(it => matches(it) || it.id === editingId);
   if (editingId === "new") items.push({ id: "new", label: "", value: "" });
-  if (!items.length) pane.innerHTML = '<div class="empty">Nothing here yet.</div>';
-  for (const it of items) {
-    const editing = it.id === editingId;
-    const el = document.createElement("div");
-    el.className = editing ? "item editing" : "item";
-    el.innerHTML = editing
-      ? `<input class="label" placeholder="Title"><textarea class="value" placeholder="${kind === "links" ? "https://…" : "Description"}"></textarea>
-        <div class="actions"><button data-a="save">Save</button><button data-a="del">✕</button></div>`
-      : `<div class="label"></div><div class="value"></div>
-        <div class="actions">${kind === "links" ? '<button data-a="open">Open</button>' : ""}<button data-a="edit">Edit</button><button data-a="del">✕</button></div>`;
-    if (editing) {
-      el.querySelector(".label").value = it.label;
-      el.querySelector(".value").value = it.value;
-    } else {
-      el.querySelector(".label").textContent = it.label;
-      el.querySelector(".value").textContent = it.value;
-    }
-    el.onclick = e => {
-      const a = e.target.dataset.a;
-      if (a === "del") return it.id === "new" ? edit(null) : remove(kind, it.id);
-      if (a === "open") return openLink(it.value);
-      if (a === "edit") return edit(it.id);
-      if (a === "save") return save(kind, it.id, el);
-      if (!editing) copy(it.value);
-    };
-    pane.appendChild(el);
-    if (it.id === "new") { el.scrollIntoView({ block: "nearest" }); el.querySelector(".label").focus(); }
+  fillPane(kind, items.map(it => itemCard(kind, it)));
+  if (editingId === "new") {
+    const el = $(`#${kind} .list`).lastElementChild;
+    el.scrollIntoView({ block: "nearest" });
+    el.querySelector(".label").focus();
   }
+}
+
+function itemCard(kind, it) {
+  const editing = it.id === editingId;
+  const el = fromTemplate(editing ? "#tpl-edit" : "#tpl-item");
+  if (editing) {
+    el.querySelector(".label").value = it.label;
+    el.querySelector(".value").value = it.value;
+    el.querySelector(".value").placeholder = kind === "links" ? "https://…" : "Description";
+  } else {
+    el.querySelector(".label").textContent = it.label;
+    el.querySelector(".value").textContent = it.value;
+    el.querySelector('[data-a="open"]').hidden = kind !== "links";
+  }
+  el.onclick = e => {
+    const a = e.target.dataset.a;
+    if (a === "del") return it.id === "new" ? edit(null) : remove(kind, it.id);
+    if (a === "open") return openLink(it.value);
+    if (a === "edit") return edit(it.id);
+    if (a === "save") return save(kind, it.id, el);
+    if (!editing) copy(it.value);
+  };
+  return el;
 }
 
 function openLink(value) {
@@ -139,26 +154,22 @@ async function save(kind, id, el) {
 }
 
 async function renderFiles() {
-  const pane = $("#files");
-  pane.innerHTML = "";
   const files = (await listFiles()).filter(matches);
-  if (!files.length) pane.innerHTML = '<div class="empty">Add your resume, cover letter, etc.</div>';
-  for (const f of files) {
-    const el = document.createElement("div");
-    el.className = "item";
-    el.innerHTML = `<div class="label"></div><div class="value"></div><div class="filemeta"></div>
-      <div class="actions"><button data-a="dl">Download</button><button data-a="del">✕</button></div>`;
-    el.querySelector(".label").textContent = f.label;
-    el.querySelector(".value").textContent = f.name;
-    el.querySelector(".filemeta").textContent = `${(f.size / 1024).toFixed(0)} KB · click to attach to the upload field`;
-    el.onclick = async e => {
-      const a = e.target.dataset.a;
-      if (a === "del") { await delFile(f.id); return render(); }
-      if (a === "dl") { return download(f); }
-      attach(f);
-    };
-    pane.appendChild(el);
-  }
+  fillPane("files", files.map(fileCard));
+}
+
+function fileCard(f) {
+  const el = fromTemplate("#tpl-file");
+  el.querySelector(".label").textContent = f.label;
+  el.querySelector(".value").textContent = f.name;
+  el.querySelector(".filemeta").textContent = `${(f.size / 1024).toFixed(0)} KB` + (IS_TAB ? "" : " · click to attach to the upload field");
+  el.onclick = async e => {
+    const a = e.target.dataset.a;
+    if (a === "del") { await delFile(f.id); return render(); }
+    if (a === "dl") { return download(f); }
+    attach(f);
+  };
+  return el;
 }
 
 function download(f) {
@@ -171,55 +182,47 @@ function download(f) {
 const toDataUrl = blob => new Promise(res => { const r = new FileReader(); r.onload = () => res(r.result); r.readAsDataURL(blob); });
 
 async function attach(f) {
-  const [tabInfo] = await chrome.tabs.query({ active: true, currentWindow: true });
-  const dataUrl = await toDataUrl(f.blob);
-  const results = await chrome.scripting.executeScript({
-    target: { tabId: tabInfo.id, allFrames: true },
-    args: [dataUrl, f.name, f.type],
-    func: async (dataUrl, name, type) => {
-      const inputs = [...document.querySelectorAll('input[type="file"]')];
-      const target = (window.__applyKitLast && window.__applyKitLast.isConnected) ? window.__applyKitLast : inputs[0];
-      if (!target) return false;
-      const blob = await (await fetch(dataUrl)).blob();
-      const file = new File([blob], name, { type: type || blob.type });
-      const dt = new DataTransfer();
-      dt.items.add(file);
-      target.files = dt.files;
-      target.dispatchEvent(new Event("input", { bubbles: true }));
-      target.dispatchEvent(new Event("change", { bubbles: true }));
-      return true;
-    }
-  });
-  const ok = results.some(r => r.result);
-  toast(ok ? "Attached ✓" : "No upload field found — click it first, or use Download");
+  if (IS_TAB) return toast("Open Apply Kit from the application page to attach");
+  try {
+    const [tabInfo] = await chrome.tabs.query({ active: true, currentWindow: true });
+    const dataUrl = await toDataUrl(f.blob);
+    const results = await chrome.scripting.executeScript({
+      target: { tabId: tabInfo.id, allFrames: true },
+      args: [dataUrl, f.name, f.type],
+      func: async (dataUrl, name, type) => {
+        const inputs = [...document.querySelectorAll('input[type="file"]')];
+        const target = (window.__applyKitLast && window.__applyKitLast.isConnected) ? window.__applyKitLast : inputs[0];
+        if (!target) return false;
+        const blob = await (await fetch(dataUrl)).blob();
+        const file = new File([blob], name, { type: type || blob.type });
+        const dt = new DataTransfer();
+        dt.items.add(file);
+        target.files = dt.files;
+        target.dispatchEvent(new Event("input", { bubbles: true }));
+        target.dispatchEvent(new Event("change", { bubbles: true }));
+        return true;
+      }
+    });
+    const ok = results.some(r => r.result);
+    toast(ok ? "Attached ✓" : "No upload field found — click it first, or use Download");
+  } catch {
+    // Firefox blocks scripts on pages like about: and addons.mozilla.org.
+    toast("Can't attach on this page — use Download");
+  }
 }
 
-function renderAddBar() {
-  const bar = $("#addbar");
-  if (tab === "files" && !IS_TAB) {
-    // Firefox closes the popup when a file picker opens, so adding files happens in a full tab.
-    bar.innerHTML = `<button id="f-open">Add / manage files in a tab</button>`;
-    $("#f-open").onclick = () => {
-      chrome.tabs.create({ url: chrome.runtime.getURL("popup.html?manage=1#files") });
-      window.close();
-    };
-    return;
-  }
-  if (tab === "files") {
-    bar.innerHTML = `<input id="f-label" placeholder="Label (e.g. Resume 2026)">
-      <input id="f-file" type="file"><button id="f-save">Add file</button>`;
-    $("#f-save").onclick = async () => {
-      const file = $("#f-file").files[0];
-      if (!file) return toast("Choose a file first");
-      await putFile({ id: uid(), label: $("#f-label").value || file.name, name: file.name, type: file.type, size: file.size, blob: file });
-      render();
-    };
-    return;
-  }
-  bar.innerHTML = `<button id="f-add" title="Add">+</button>`;
-  $("#f-add").onclick = () => edit("new");
-}
-
-document.querySelectorAll(".tab").forEach(b => b.onclick = () => { tab = b.dataset.tab; editingId = null; render(); });
+document.querySelectorAll(".tab").forEach(b => b.onclick = () => showTab(b.dataset.tab));
 $("#search").oninput = e => { query = e.target.value; render(); };
-render();
+$("#add-item").onclick = () => edit("new");
+$("#open-manager").onclick = () => {
+  chrome.tabs.create({ url: chrome.runtime.getURL("popup.html?manage=1#files") });
+  window.close();
+};
+$("#file-form").onsubmit = async e => {
+  e.preventDefault();
+  const file = $("#f-file").files[0];
+  await putFile({ id: uid(), label: $("#f-label").value || file.name, name: file.name, type: file.type, size: file.size, blob: file });
+  e.target.reset();
+  render();
+};
+showTab(tab);
