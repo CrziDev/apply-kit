@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "Apply Kit",
+  "version": "1.0",
+  "description": "One-click copy of your links and answers, and one-click attach of your resume/files while filling out job applications.",
+  "browser_specific_settings": {
+    "gecko": { "id": "apply-kit@local", "strict_min_version": "113.0" }
+  },
+  "permissions": ["storage", "activeTab", "scripting", "unlimitedStorage", "clipboardWrite"],
+  "host_permissions": ["<all_urls>"],
+  "action": { "default_popup": "popup.html", "default_title": "Apply Kit" },
+  "content_scripts": [
+    { "matches": ["<all_urls>"], "js": ["content.js"], "all_frames": true, "run_at": "document_start" }
+  ]
+}

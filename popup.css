@@ -1,0 +1,31 @@
+* { box-sizing: border-box; }
+body { width: 380px; max-height: 560px; margin: 0; font: 13px system-ui, sans-serif; color: #1f2328; background: #fff; display: flex; flex-direction: column; }
+nav { display: flex; border-bottom: 1px solid #d0d7de; }
+.tab { flex: 1; padding: 10px; border: 0; background: none; cursor: pointer; font-size: 13px; color: #57606a; border-bottom: 2px solid transparent; }
+.tab.active { color: #0969da; border-bottom-color: #0969da; font-weight: 600; }
+body.tabmode { width: 560px; max-height: none; margin: 0 auto; }
+#search { margin: 8px; padding: 7px 9px; border: 1px solid #d0d7de; border-radius: 6px; }
+.pane { display: none; overflow-y: auto; padding: 0 8px 8px; flex: 1; }
+.pane.active { display: block; }
+.item { border: 1px solid #d0d7de; border-radius: 8px; padding: 8px 10px; margin-bottom: 6px; cursor: pointer; position: relative; }
+.item:hover { background: #f6f8fa; border-color: #0969da; }
+.item .label { font-weight: 600; font-size: 12px; color: #57606a; }
+.item .value { margin-top: 2px; white-space: pre-wrap; word-break: break-word; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.item .actions { position: absolute; top: 6px; right: 8px; display: none; gap: 4px; }
+.item:hover .actions { display: flex; }
+.item .actions button { border: 0; background: #eaeef2; border-radius: 4px; cursor: pointer; padding: 2px 6px; font-size: 11px; }
+.item .actions button:hover { background: #d0d7de; }
+.item.editing, .item.editing:hover { cursor: default; background: #fff; border-color: #0969da; }
+.item.editing .actions { display: flex; }
+.item input.label, .item textarea.value { display: block; width: 100%; padding: 3px 6px; border: 1px solid #d0d7de; border-radius: 4px; font: inherit; background: #fff; }
+.item input.label { width: calc(100% - 70px); font-weight: 600; font-size: 12px; color: #57606a; }
+.item textarea.value { margin-top: 6px; min-height: 50px; resize: vertical; overflow: auto; }
+footer { border-top: 1px solid #d0d7de; padding: 8px; display: flex; flex-direction: column; gap: 6px; }
+footer input, footer textarea { width: 100%; padding: 6px 8px; border: 1px solid #d0d7de; border-radius: 6px; font: inherit; }
+footer textarea { resize: vertical; min-height: 50px; }
+#f-add { font-size: 18px; line-height: 1; }
+footer button { padding: 7px; border: 0; border-radius: 6px; background: #0969da; color: #fff; cursor: pointer; font-size: 13px; }
+#toast { position: fixed; bottom: 70px; left: 50%; transform: translateX(-50%); background: #1f2328; color: #fff; padding: 6px 12px; border-radius: 6px; opacity: 0; transition: opacity .2s; pointer-events: none; z-index: 9; }
+#toast.show { opacity: .95; }
+.empty { color: #8c959f; text-align: center; padding: 20px 0; }
+.filemeta { color: #8c959f; font-size: 11px; }

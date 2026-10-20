@@ -1,0 +1,23 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <nav>
+    <button class="tab active" data-tab="links">Links</button>
+    <button class="tab" data-tab="text">Text</button>
+    <button class="tab" data-tab="files">Files</button>
+  </nav>
+  <input id="search" placeholder="Search…">
+  <div id="toast"></div>
+
+  <section id="links" class="pane active"></section>
+  <section id="text" class="pane"></section>
+  <section id="files" class="pane"></section>
+
+  <footer id="addbar"></footer>
+  <script src="popup.js"></script>
+</body>
+</html>
