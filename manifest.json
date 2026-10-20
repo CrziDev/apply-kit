@@ -5,7 +5,7 @@
   "description": "Save your links, text, and files in one place. Click to copy or attach.",
   "browser_specific_settings": {
     "gecko": {
-      "id": "apply-kit@crzidev.dev",
+      "id": "stash@crzidev.dev",
       "strict_min_version": "113.0",
       "data_collection_permissions": { "required": ["none"] }
     }
