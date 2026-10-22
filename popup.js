@@ -71,7 +71,8 @@ function showTab(name) {
   document.querySelectorAll(".tab").forEach(b => b.setAttribute("aria-selected", b.dataset.tab === tab));
   document.querySelectorAll(".pane").forEach(p => p.hidden = p.id !== tab);
   // Firefox closes the popup when a file picker opens, so adding files happens in a full tab.
-  $("#add-item").hidden = tab === "files";
+  $("footer .row").hidden = tab === "files";
+  $("#fill-page").hidden = IS_TAB;
   $("#open-manager").hidden = tab !== "files" || IS_TAB;
   $("#file-form").hidden = tab !== "files" || !IS_TAB;
   render();
@@ -122,11 +123,68 @@ function itemCard(kind, it) {
   return el;
 }
 
+// Bare domains like "your-site.com" need a scheme, or tabs open to an error page and URL fields reject them.
+const withScheme = v => /^[a-z][a-z0-9+.-]*:/i.test(v) ? v : "https://" + v;
+
 function openLink(value) {
-  // Bare domains like "your-site.com" need a scheme or the tab opens to an error page.
-  const url = /^[a-z][a-z0-9+.-]*:/i.test(value) ? value : "https://" + value;
-  chrome.tabs.create({ url });
+  chrome.tabs.create({ url: withScheme(value) });
   if (!IS_TAB) window.close();
+}
+
+// "https://www.linkedin.com/in/me" → "linkedin", so a "LinkedIn profile" field matches however the link is labelled.
+function siteName(url) {
+  try {
+    const name = new URL(url).hostname.split(".").at(-2);
+    return name && name.length > 2 ? name : null;
+  } catch { return null; }
+}
+
+async function fillPage() {
+  const data = await store.get();
+  const items = [
+    ...data.links.map(it => ({ value: withScheme(it.value), keys: [it.label, siteName(withScheme(it.value))] })),
+    ...data.text.map(it => ({ value: it.value, keys: [it.label] }))
+  ];
+  try {
+    const [tabInfo] = await chrome.tabs.query({ active: true, currentWindow: true });
+    const results = await chrome.scripting.executeScript({
+      target: { tabId: tabInfo.id, allFrames: true },
+      args: [items],
+      func: items => {
+        const norm = s => " " + (s || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim() + " ";
+        const keys = items.map(it => it.keys.filter(Boolean).map(norm).filter(k => k.trim()));
+        const describe = el => {
+          // name/id are often camelCase ("phoneNumber"), so split those into words too.
+          const parts = [el.name, el.id].flatMap(s => [s, s.replace(/([a-z])([A-Z])/g, "$1 $2")]);
+          parts.push(el.placeholder, el.title, el.getAttribute("aria-label"), el.getAttribute("autocomplete"));
+          for (const l of el.labels || []) parts.push(l.textContent);
+          for (const id of (el.getAttribute("aria-labelledby") || "").split(/\s+/)) if (id) parts.push(document.getElementById(id)?.textContent);
+          if (el.type === "tel") parts.push("phone");
+          if (el.type === "email") parts.push("email");
+          return norm(parts.join(" "));
+        };
+        let filled = 0;
+        for (const el of document.querySelectorAll("input, textarea")) {
+          if (el.disabled || el.readOnly || el.value || !el.getClientRects().length) continue;
+          if (el.tagName === "INPUT" && !/^(text|url|email|tel|search)$/.test(el.type)) continue;
+          const desc = describe(el);
+          const hits = items.filter((_, i) => keys[i].some(k => desc.includes(k)));
+          if (hits.length !== 1) continue; // no match, or ambiguous like "LinkedIn or GitHub"
+          // Use the native setter so React/Vue forms pick up the change instead of reverting it.
+          const proto = el.tagName === "TEXTAREA" ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+          Object.getOwnPropertyDescriptor(proto, "value").set.call(el, hits[0].value);
+          el.dispatchEvent(new Event("input", { bubbles: true }));
+          el.dispatchEvent(new Event("change", { bubbles: true }));
+          filled++;
+        }
+        return filled;
+      }
+    });
+    const n = results.reduce((sum, r) => sum + (r.result || 0), 0);
+    toast(n ? `Filled ${n} field${n > 1 ? "s" : ""} ✓` : "No matching empty fields");
+  } catch {
+    toast("Can't fill this page");
+  }
 }
 
 async function remove(kind, id) {
@@ -214,6 +272,7 @@ async function attach(f) {
 document.querySelectorAll(".tab").forEach(b => b.onclick = () => showTab(b.dataset.tab));
 $("#search").oninput = e => { query = e.target.value; render(); };
 $("#add-item").onclick = () => edit("new");
+$("#fill-page").onclick = fillPage;
 $("#open-manager").onclick = () => {
   chrome.tabs.create({ url: chrome.runtime.getURL("popup.html?manage=1#files") });
   window.close();

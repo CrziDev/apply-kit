@@ -24,7 +24,11 @@ footer { border-top: 1px solid #d0d7de; padding: 8px; display: flex; flex-direct
 #file-form { display: flex; flex-direction: column; gap: 6px; }
 footer input, footer textarea { width: 100%; padding: 6px 8px; border: 1px solid #d0d7de; border-radius: 6px; font: inherit; }
 footer textarea { resize: vertical; min-height: 50px; }
+footer .row { display: flex; gap: 6px; }
+footer .row button { flex: 1; }
 #add-item { font-size: 18px; line-height: 1; }
+#fill-page { background: #eaeef2; color: #1f2328; }
+#fill-page:hover { background: #d0d7de; }
 footer button { padding: 7px; border: 0; border-radius: 6px; background: #0969da; color: #fff; cursor: pointer; font-size: 13px; }
 #toast { position: fixed; bottom: 70px; left: 50%; transform: translateX(-50%); background: #1f2328; color: #fff; padding: 6px 12px; border-radius: 6px; opacity: 0; transition: opacity .2s; pointer-events: none; z-index: 9; }
 #toast.show { opacity: .95; }
